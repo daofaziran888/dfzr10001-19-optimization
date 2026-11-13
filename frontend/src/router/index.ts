@@ -7,6 +7,7 @@ const Task = () => import('@/views/task/index.vue')
 const Schedule = () => import('@/views/schedule/index.vue')
 const Increment = () => import('@/views/increment/index.vue')
 const Rpa = () => import('@/views/rpa/index.vue')
+const Workbench = () => import('@/views/workbench/index.vue')
 const Log = () => import('@/views/log/index.vue')
 const Retry = () => import('@/views/retry/index.vue')
 const Proxy = () => import('@/views/proxy/index.vue')
@@ -28,6 +29,7 @@ const router = createRouter({
     { path: '/schedule', name: 'schedule', component: Schedule },
     { path: '/increment', name: 'increment', component: Increment },
     { path: '/rpa', name: 'rpa', component: Rpa },
+    { path: '/workbench', name: 'workbench', component: Workbench },
     { path: '/log', name: 'log', component: Log },
     { path: '/retry', name: 'retry', component: Retry },
     { path: '/proxy', name: 'proxy', component: Proxy },

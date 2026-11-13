@@ -12,6 +12,7 @@ from app.routers import task as router_task
 from app.routers import schedule as router_schedule
 from app.routers import increment as router_increment
 from app.routers import rpa as router_rpa
+from app.routers import workbench as router_workbench
 from app.routers import log as router_log
 from app.routers import retry as router_retry
 from app.routers import proxy as router_proxy
@@ -23,4 +24,4 @@ from app.routers import dashboard as router_dashboard
 from app.routers import storage as router_storage
 from app.routers import audit as router_audit
 
-ROUTERS = [router_source, router_website, router_task, router_schedule, router_increment, router_rpa, router_log, router_retry, router_proxy, router_parser, router_dedup, router_release, router_alert, router_dashboard, router_storage, router_audit]
+ROUTERS = [router_source, router_website, router_task, router_schedule, router_increment, router_rpa, router_workbench, router_log, router_retry, router_proxy, router_parser, router_dedup, router_release, router_alert, router_dashboard, router_storage, router_audit]

@@ -1,4 +1,4 @@
-"""RPA流程配置接口：维护RPA流程，覆盖提交校验、启用配置、停用配置等动作。"""
+"""RPA流程配置接口：维护RPA流程，覆盖提交校验、启用配置、停用配置与等待依赖保存。"""
 from __future__ import annotations
 
 from typing import Any
@@ -30,6 +30,20 @@ def list_entries(
     return PageResult(items=items, total=total, page=page, size=size)
 
 
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出RPA流程配置清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "rpa", "total": total, "items": items}
+
+
+@router.get("/schedulable")
+def schedulable_entries() -> dict[str, Any]:
+    """可调度集合：已启用且等待依赖校验通过的流程，调度待办据此判断能否启动。"""
+    items = service.schedulable_entries()
+    return {"total": len(items), "items": items}
+
+
 @router.get("/{entry_id}", response_model=dict)
 def get_entry(entry_id: int) -> dict:
     """读取单条RPA流程明细；不存在时给出可读的错误说明。"""
@@ -37,6 +51,15 @@ def get_entry(entry_id: int) -> dict:
     if entry is None:
         raise HTTPException(status_code=404, detail=f"RPA流程 {entry_id} 不存在或已归档")
     return entry
+
+
+@router.get("/{entry_id}/validation", response_model=dict)
+def get_validation(entry_id: int) -> dict:
+    """重跑并返回该流程的等待依赖校验结论（联接动作序列、等待条件、超时秒数、结果字段、运行环境）。"""
+    entry = service.get_entry(entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"RPA流程 {entry_id} 不存在或已归档")
+    return service.validate(entry)
 
 
 @router.post("", response_model=ActionResult)
@@ -48,18 +71,23 @@ def create_entry(payload: EntryPayload) -> ActionResult:
     return ActionResult(ok=True, message="RPA流程已登记", entry=entry)
 
 
-@router.post("/{entry_id}/actions", response_model=ActionResult)
-def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
-    """对单条RPA流程执行提交校验、启用配置、停用配置；不允许的动作会被拦下并说明原因。"""
-    action = str(payload.values.get("action") or "").strip()
-    entry, message = service.run_action(entry_id, action)
+@router.post("/{entry_id}/dependencies", response_model=ActionResult)
+def save_dependencies(entry_id: int, payload: EntryPayload) -> ActionResult:
+    """保存等待依赖：同一依赖反复保存只保留一版，保存后立即重跑校验并同步工作台。"""
+    raw = payload.values.get("依赖列表")
+    if not isinstance(raw, list):
+        return ActionResult(ok=False, message="依赖列表必须是数组，元素为等待条件对象")
+    entry, message = service.save_dependencies(entry_id, raw)
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
 
 
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出RPA流程配置清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "rpa", "total": total, "items": items}
+@router.post("/{entry_id}/actions", response_model=ActionResult)
+def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
+    """对单条RPA流程执行提交校验、启用配置、停用配置；等待依赖成环时启用会被阻止。"""
+    action = str(payload.values.get("action") or "").strip()
+    entry, message = service.run_action(entry_id, action)
+    if entry is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=entry)

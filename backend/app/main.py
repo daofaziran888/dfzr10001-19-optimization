@@ -5,14 +5,26 @@
 """
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.services.rpa import RpaService
 from app.store import store
 
-app = FastAPI(title="数据采集调度中心", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """启动巡检：把存量RPA流程全部校验一遍，阻断待办先进任务工作台。"""
+    RpaService().validate_all()
+    yield
+
+
+app = FastAPI(title="数据采集调度中心", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
